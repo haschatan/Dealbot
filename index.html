@@ -1,0 +1,104 @@
+import { useEffect, useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Bell, Search, Trash2, Sliders, Tag, Moon, Sun, Eye } from "lucide-react";
+import io from "socket.io-client";
+import { motion } from "framer-motion";
+
+const socket = io("http://localhost:5000");
+const DEFAULT_EXPIRATION_TIME = 24 * 60 * 60 * 1000; // 24 heures en millisecondes
+
+export default function Listings() {
+  const [listings, setListings] = useState([]);
+  const [offer, setOffer] = useState("");
+  const [selectedListing, setSelectedListing] = useState(null);
+  const [offers, setOffers] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [messageContent, setMessageContent] = useState("");
+  const [chatListing, setChatListing] = useState(null);
+  const [notifications, setNotifications] = useState(() => {
+    const savedNotifications = localStorage.getItem("notifications");
+    if (!savedNotifications) return [];
+    const parsedNotifications = JSON.parse(savedNotifications);
+    return parsedNotifications.filter(notif => Date.now() - notif.id < DEFAULT_EXPIRATION_TIME);
+  });
+  const [unreadCount, setUnreadCount] = useState(() => {
+    const savedUnreadCount = localStorage.getItem("unreadCount");
+    return savedUnreadCount ? JSON.parse(savedUnreadCount) : 0;
+  });
+  const [disableAnimations, setDisableAnimations] = useState(() => {
+    const savedSetting = localStorage.getItem("disableAnimations");
+    return savedSetting ? JSON.parse(savedSetting) : false;
+  });
+  const [darkMode, setDarkMode] = useState(() => {
+    const savedMode = localStorage.getItem("darkMode");
+    return savedMode ? JSON.parse(savedMode) : false;
+  });
+  const [highContrast, setHighContrast] = useState(() => {
+    const savedContrast = localStorage.getItem("highContrast");
+    return savedContrast ? JSON.parse(savedContrast) : false;
+  });
+  const [showNotificationPage, setShowNotificationPage] = useState(false);
+  
+  useEffect(() => {
+    fetch("http://localhost:5000/listings")
+      .then((res) => res.json())
+      .then((data) => setListings(data));
+  }, []);
+
+  const toggleAnimations = () => {
+    setDisableAnimations(prev => {
+      const newSetting = !prev;
+      localStorage.setItem("disableAnimations", JSON.stringify(newSetting));
+      return newSetting;
+    });
+  };
+
+  const toggleDarkMode = () => {
+    setDarkMode(prev => {
+      const newMode = !prev;
+      localStorage.setItem("darkMode", JSON.stringify(newMode));
+      return newMode;
+    });
+  };
+
+  const toggleHighContrast = () => {
+    setHighContrast(prev => {
+      const newContrast = !prev;
+      localStorage.setItem("highContrast", JSON.stringify(newContrast));
+      return newContrast;
+    });
+  };
+
+  return (
+    <div className={`p-6 space-y-6 ${darkMode ? "bg-gray-900 text-white" : "bg-white text-black"} ${highContrast ? "contrast-200" : ""}`}>
+      <h1 className="text-2xl font-bold">Annonces de véhicules</h1>
+      <div className="flex space-x-4">
+        <div className="relative cursor-pointer" onClick={() => setShowNotificationPage(!showNotificationPage)}>
+          <Bell className="w-6 h-6" />
+          {unreadCount > 0 && !disableAnimations && (
+            <motion.span 
+              initial={{ scale: 0 }} 
+              animate={{ scale: 1 }} 
+              transition={{ type: "spring", stiffness: 300 }}
+              className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full px-2"
+            >
+              {unreadCount}
+            </motion.span>
+          )}
+        </div>
+        <Button size="sm" onClick={toggleAnimations}>
+          {disableAnimations ? "Activer animations" : "Désactiver animations"}
+        </Button>
+        <Button size="sm" onClick={toggleDarkMode}>
+          {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+        </Button>
+        <Button size="sm" onClick={toggleHighContrast}>
+          {highContrast ? "Désactiver Haute Visibilité" : "Activer Haute Visibilité"}
+        </Button>
+      </div>
+    </div>
+  );
+}
